@@ -1,7 +1,16 @@
+<!--suppress HtmlDeprecatedAttribute -->
+<p align="right">
+    <a href="https://github.com/tommed" title="See Project Ducto">
+        <img src="./assets/ducto-logo-small.png" alt="A part of Project Ducto"/>
+    </a>
+</p>
+
 # Ducto Faker
-Go library and CLI for generating fake/test event data based on 
-templates/sample data using simple mustache syntax and inline modifiers; 
-supports custom types.
+
+[![CI](https://github.com/tommed/ducto-faker/actions/workflows/ci.yml/badge.svg)](https://github.com/tommed/ducto-faker/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/tommed/ducto-faker/branch/main/graph/badge.svg)](https://codecov.io/gh/tommed/ducto-faker)
+
+> Go library and CLI for generating fake/test event data based on templates/sample data using simple mustache syntax and inline modifiers; supports custom types.
 
 ---
 ## ✅ Features
