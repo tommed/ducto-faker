@@ -57,7 +57,7 @@
 				
 				<option value="file0">github.com/tommed/ducto-faker/cmd/ducto-faker/main.go (0.0%)</option>
 				
-				<option value="file1">github.com/tommed/ducto-faker/faker/parser.go (0.0%)</option>
+				<option value="file1">github.com/tommed/ducto-faker/faker/parser.go (91.9%)</option>
 				
 				</select>
 			</div>
@@ -104,72 +104,81 @@ type Placeholder struct {
         Params    map[string]string
 }
 
-// ParseTemplate reads a template file and extracts all inline-modifier placeholders.
-func ParseTemplate(path string) ([]Placeholder, error) <span class="cov0" title="0">{
+// ParseTemplate reads a template file and extracts all inline-modifier placeholders using {{ }} with quoted strings.
+func ParseTemplate(path string) ([]Placeholder, error) <span class="cov5" title="6">{
         data, err := os.ReadFile(path)
         if err != nil </span><span class="cov0" title="0">{
                 return nil, fmt.Errorf("failed to read template %s: %w", path, err)
         }</span>
 
-        <span class="cov0" title="0">t, err := template.New("tmpl").Parse(string(data))
+        <span class="cov5" title="6">t, err := template.New("tmpl").Parse(string(data))
         if err != nil </span><span class="cov0" title="0">{
                 return nil, fmt.Errorf("failed to parse template %s: %w", path, err)
         }</span>
 
-        <span class="cov0" title="0">var out []Placeholder
+        <span class="cov5" title="6">var out []Placeholder
         if t.Tree == nil || t.Tree.Root == nil </span><span class="cov0" title="0">{
                 return out, nil
         }</span>
-        <span class="cov0" title="0">walkNode(t.Tree.Root, &amp;out)
+        <span class="cov5" title="6">walkNode(t.Tree.Root, &amp;out)
         return out, nil</span>
 }
 
-func walkNode(node parse.Node, out *[]Placeholder) <span class="cov0" title="0">{
+func walkNode(node parse.Node, out *[]Placeholder) <span class="cov10" title="36">{
         switch n := node.(type) </span>{
-        case *parse.ListNode:<span class="cov0" title="0">
-                for _, child := range n.Nodes </span><span class="cov0" title="0">{
+        case *parse.ListNode:<span class="cov7" title="12">
+                for _, child := range n.Nodes </span><span class="cov8" title="24">{
                         walkNode(child, out)
                 }</span>
-        case *parse.ActionNode:<span class="cov0" title="0">
-                raw := strings.TrimSpace(n.String()) // "{{field:type:key=val}}"
-                if strings.HasPrefix(raw, "{{") &amp;&amp; strings.HasSuffix(raw, "}}") </span><span class="cov0" title="0">{
-                        inner := strings.TrimSpace(raw[2 : len(raw)-2])
-                        parts := strings.Split(inner, ":")
-                        if len(parts) &gt;= 2 </span><span class="cov0" title="0">{
-                                *out = append(*out, Placeholder{
-                                        FieldName: parts[0],
-                                        Type:      parts[1],
-                                        Params:    parseParams(parts[2:]),
-                                })
-                        }</span>
+
+        case *parse.ActionNode:<span class="cov7" title="11">
+                if n.Pipe != nil </span><span class="cov7" title="11">{
+                        for _, cmd := range n.Pipe.Cmds </span><span class="cov7" title="11">{
+                                for _, arg := range cmd.Args </span><span class="cov7" title="11">{
+                                        if str, ok := arg.(*parse.StringNode); ok </span><span class="cov7" title="11">{
+                                                raw := strings.TrimSpace(str.Text)
+                                                parts := strings.Split(raw, ":")
+                                                if len(parts) &gt;= 2 </span><span class="cov6" title="10">{
+                                                        *out = append(*out, Placeholder{
+                                                                FieldName: parts[0],
+                                                                Type:      parts[1],
+                                                                Params:    parseParams(parts[2:]),
+                                                        })
+                                                }</span>
+                                        }
+                                }
+                        }
                 }
-        case *parse.IfNode:<span class="cov0" title="0">
+
+        case *parse.IfNode:<span class="cov1" title="1">
                 walkNode(n.List, out)
-                if n.ElseList != nil </span><span class="cov0" title="0">{
+                if n.ElseList != nil </span><span class="cov1" title="1">{
                         walkNode(n.ElseList, out)
                 }</span>
-        case *parse.RangeNode:<span class="cov0" title="0">
+
+        case *parse.RangeNode:<span class="cov1" title="1">
                 walkNode(n.List, out)
-                if n.ElseList != nil </span><span class="cov0" title="0">{
+                if n.ElseList != nil </span><span class="cov1" title="1">{
                         walkNode(n.ElseList, out)
                 }</span>
-        case *parse.WithNode:<span class="cov0" title="0">
+
+        case *parse.WithNode:<span class="cov1" title="1">
                 walkNode(n.List, out)
-                if n.ElseList != nil </span><span class="cov0" title="0">{
+                if n.ElseList != nil </span><span class="cov1" title="1">{
                         walkNode(n.ElseList, out)
                 }</span>
         }
 }
 
-func parseParams(items []string) map[string]string <span class="cov0" title="0">{
+func parseParams(items []string) map[string]string <span class="cov6" title="10">{
         m := make(map[string]string, len(items))
-        for _, kv := range items </span><span class="cov0" title="0">{
+        for _, kv := range items </span><span class="cov6" title="8">{
                 parts := strings.SplitN(kv, "=", 2)
-                if len(parts) == 2 </span><span class="cov0" title="0">{
+                if len(parts) == 2 </span><span class="cov6" title="8">{
                         m[parts[0]] = parts[1]
                 }</span>
         }
-        <span class="cov0" title="0">return m</span>
+        <span class="cov6" title="10">return m</span>
 }
 </pre>
 		

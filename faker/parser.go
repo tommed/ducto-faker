@@ -2,7 +2,7 @@ package faker
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 	"text/template"
 	"text/template/parse"
@@ -17,7 +17,7 @@ type Placeholder struct {
 
 // ParseTemplate reads a template file and extracts all inline-modifier placeholders using {{ }} with quoted strings.
 func ParseTemplate(path string) ([]Placeholder, error) {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read template %s: %w", path, err)
 	}
