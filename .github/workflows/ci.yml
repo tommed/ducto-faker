@@ -35,14 +35,14 @@ jobs:
       - name: Makefile CI
         run: make ci
 
-#      - name: Upload coverage to Codecov
-#        uses: codecov/codecov-action@v4
-#        with:
-#          token: ${{ secrets.CODECOV_TOKEN }}
-#          files: ./docs/coverage.out
-#          flags: unittests
-#          name: codecov-coverage
-#          fail_ci_if_error: true
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./docs/coverage.out
+          flags: unittests
+          name: codecov-coverage
+          fail_ci_if_error: true
 
       - name: Upload Coverage as Artifact
         uses: actions/upload-artifact@v4
