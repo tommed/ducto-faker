@@ -15,7 +15,7 @@
 
 * Provide a CLI under `./cmd/ducto-faker` that reads a YAML/JSON configuration and streams fake data to stdout.
 * Support multiple output formats in the future (JSONL, CSV, TSV, PSV, Avro), with JSONL initially.
-* Load Mustache templates from file paths (absolute or relative to the config file).
+* Load templates from file paths (absolute or relative to the config file) using Go’s `text/template` engine.
 * Support multiple templates with weighted generation and global record count.
 * Allow inline modifiers in placeholders for type, min/max, probabilities, etc., and custom types via top-level definitions.
 * Expose a Go library API for programmatic use.
@@ -63,41 +63,43 @@ custom_types:
 
 # Templates: path can be absolute or relative to this config file
 templates:
-  - path: templates/login.json.mustache
+  - path: templates/login.json.tmpl
     weight: 50
-  - path: templates/purchase.json.mustache
+  - path: templates/purchase.json.tmpl
     weight: 30
-  - path: templates/error.json.mustache
+  - path: templates/error.json.tmpl
     weight: 20
 ```
 
-### 3.1 Mustache Templates
+### 3.1 Template Files
 
-* Each template file is a standard Mustache (`.mustache`) containing a JSON model with placeholders.
-* Placeholders support **inline modifiers** to specify type and constraints directly:
+* Each template file is a `text/template`-compatible `.tmpl` file containing a JSON model with quoted placeholders.
+* Placeholders use **Go's double-curly syntax**, with quoted inline-modifier strings:
 
-  ```mustache
+  ```go
   {
-    "lat":      "{{latitude:float:min=49.9:max=59.0}}",
-    "lon":      "{{longitude:float:min=-8.6:max=1.8}}",
-    "status":   "{{status:enum:values=OPEN,CLOSED,UNKNOWN}}",
-    "user_id":  "{{user_id:uuid}}",
-    "event_ts": "{{event_ts:datetime:min=2021-01-01T00:00:00Z:max=2021-12-31T23:59:59Z}}"
+    "lat":      {{"latitude:float:min=49.9:max=59.0"}},
+    "lon":      {{"longitude:float:min=-8.6:max=1.8"}},
+    "status":   {{"status:enum:values=OPEN,CLOSED,UNKNOWN"}},
+    "user_id":  {{"user_id:uuid"}},
+    "event_ts": {{"event_ts:datetime:min=2021-01-01T00:00:00Z:max=2021-12-31T23:59:59Z"}}
   }
   ```
-* To reference a **custom type** defined in `custom_types`, simply omit inline constraints:
 
-  ```mustache
+* To reference a **custom type** defined in `custom_types`, omit inline constraints:
+
+  ```go
   {
-    "state": "{{status:enum}}"
+    "state": {{"status:enum"}}
   }
   ```
+
 * During load, for each placeholder:
-
-    1. Split on `:` to get `name`, `type`, and optional `key=value` pairs.
-    2. If `type` matches a key in `custom_types`, load its config.
-    3. Override any custom-type defaults with inline constraints.
-    4. Build the corresponding `Field` generator.
+  1. Strip the `{{ }}` delimiters and extract the quoted string.
+  2. Split on `:` to get `name`, `type`, and optional `key=value` pairs.
+  3. If `type` matches a key in `custom_types`, load its config.
+  4. Override any custom-type defaults with inline constraints.
+  5. Build the corresponding `Field` generator.
 
 ## 4. Architecture & Packages
 
@@ -110,7 +112,7 @@ templates:
 │   └── config.go             # Config structs & Unmarshal logic
 ├── faker/
 │   ├── generator.go          # Core logic: template loading, placeholder parsing, record gen
-│   ├── parser.go             # Mustache AST inspection & inline-modifier parser
+│   ├── parser.go             # Template AST inspection & inline-modifier parser
 │   ├── types.go              # Field type definitions & interfaces
 │   └── plugins.go            # Plugin registry (faker engines)
 ├── output/
@@ -124,7 +126,7 @@ templates:
 
 ## 5. Placeholder & Type Resolution
 
-* **Inline modifiers**: `{{name:type:key=val,...}}` parsed into a map of parameters.
+* **Inline modifiers**: `{{"name:type:key=val,..."}}` parsed into a map of parameters.
 * **Custom types**: top-level `custom_types` block; each entry populates defaults.
 * Resolution order: defaults → custom-type defaults → inline overrides.
 
@@ -141,7 +143,7 @@ templates:
 
 ## 8. Testing Strategy
 
-* TDD: tests for parser (inline modifiers), custom-type loading, Mustache AST hooks, generator logic, and writer.
+* TDD: tests for parser (inline modifiers), custom-type loading, template AST hooks, generator logic, and writer.
 * Table-driven tests to cover various placeholder scenarios.
 * Achieve 100% coverage with Go’s `testing` package.
 
