@@ -1,0 +1,5 @@
+total_records: 10
+
+templates:
+  - path: "templates/simplest.template.json"
+    weight: 1

@@ -70,6 +70,19 @@ func TestParseTemplate_InvalidPlaceholder(t *testing.T) {
 	assert.Empty(t, result)
 }
 
+func TestParseTemplate_IncorrectPath(t *testing.T) {
+	_, err := ParseTemplate("./non-existent-file.template")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to read template")
+}
+
+func TestParseTemplate_BadTemplateToParse(t *testing.T) {
+	path, _ := filepath.Abs("../testdata/bad_template.txt")
+	_, err := ParseTemplate(path)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to parse template")
+}
+
 func TestParseTemplate_IfRangeWithBlocks(t *testing.T) {
 	tpl := `{{if true}}{{"one:type:foo=bar"}}{{else}}{{"two:type"}}{{end}}{{range .Items}}{{"three:type:min=1:max=2"}}{{else}}{{"four:type"}}{{end}}{{with .Inner}}{{"five:type"}}{{else}}{{"six:type"}}{{end}}`
 	path := writeTempTemplate(t, tpl)

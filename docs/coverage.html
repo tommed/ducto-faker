@@ -57,7 +57,21 @@
 				
 				<option value="file0">github.com/tommed/ducto-faker/cmd/ducto-faker/main.go (0.0%)</option>
 				
-				<option value="file1">github.com/tommed/ducto-faker/faker/parser.go (91.9%)</option>
+				<option value="file1">github.com/tommed/ducto-faker/config/config.go (0.0%)</option>
+				
+				<option value="file2">github.com/tommed/ducto-faker/faker/generator.go (80.0%)</option>
+				
+				<option value="file3">github.com/tommed/ducto-faker/faker/parser.go (97.3%)</option>
+				
+				<option value="file4">github.com/tommed/ducto-faker/faker/plugins.go (100.0%)</option>
+				
+				<option value="file5">github.com/tommed/ducto-faker/faker/type_enum.go (90.9%)</option>
+				
+				<option value="file6">github.com/tommed/ducto-faker/faker/type_uuid.go (100.0%)</option>
+				
+				<option value="file7">github.com/tommed/ducto-faker/faker/utils.go (100.0%)</option>
+				
+				<option value="file8">github.com/tommed/ducto-faker/internal/cli/runner.go (0.0%)</option>
 				
 				</select>
 			</div>
@@ -80,14 +94,233 @@
 		</div>
 		<div id="content">
 		
-		<pre class="file" id="file0" style="display: none">package main
+		<pre class="file" id="file0" style="display: none">// cmd/ducto-faker/main.go
+package main
 
-func main() {<span class="cov0" title="0">
+import (
+        "github.com/tommed/ducto-faker/internal/cli"
+        "os"
+)
 
+func main() <span class="cov0" title="0">{
+        os.Exit(cli.Run(os.Args[1:], os.Stdout, os.Stderr))
 }</span>
 </pre>
 		
-		<pre class="file" id="file1" style="display: none">package faker
+		<pre class="file" id="file1" style="display: none">package config
+
+import (
+        "encoding/json"
+        "errors"
+        "fmt"
+        "github.com/mitchellh/mapstructure"
+        "github.com/tommed/ducto-faker/faker"
+        "gopkg.in/yaml.v3"
+        "os"
+        "path/filepath"
+        "strings"
+)
+
+type Config struct {
+        TotalRecords int                         `mapstructure:"total_records"`
+        CustomTypes  map[string]faker.CustomType `mapstructure:"custom_types"`
+        Templates    []templateDef               `mapstructure:"templates"`
+}
+
+type templateDef struct {
+        Path   string `mapstructure:"path"`
+        Weight int    `mapstructure:"weight"`
+}
+
+func Load(configPath string) (*Config, error) <span class="cov0" title="0">{
+        if configPath == "" </span><span class="cov0" title="0">{
+                return nil, errors.New("config file path is required")
+        }</span>
+
+        // read
+        <span class="cov0" title="0">data, err := os.ReadFile(configPath)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to read config file: %v", err)
+        }</span>
+
+        // parse
+        <span class="cov0" title="0">var raw map[string]interface{}
+        switch </span>{
+        case strings.HasSuffix(configPath, ".yaml"), strings.HasSuffix(configPath, ".yml"):<span class="cov0" title="0">
+                err = yaml.Unmarshal(data, &amp;raw)</span>
+        case strings.HasSuffix(configPath, ".json"):<span class="cov0" title="0">
+                err = json.Unmarshal(data, &amp;raw)</span>
+        default:<span class="cov0" title="0">
+                err = errors.New("unsupported config format: must be .yaml or .json")</span>
+        }
+        <span class="cov0" title="0">if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to parse raw config: %v", err)
+        }</span>
+
+        // decode
+        <span class="cov0" title="0">var cfg Config
+        decoder, _ := mapstructure.NewDecoder(&amp;mapstructure.DecoderConfig{
+                Result:  &amp;cfg,
+                TagName: "mapstructure",
+        })
+        err = decoder.Decode(raw)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to decode config: %v", err)
+        }</span>
+
+        // resolve template paths relative to the config file
+        <span class="cov0" title="0">cfgDir := filepath.Dir(configPath)
+        for i, t := range cfg.Templates </span><span class="cov0" title="0">{
+                relPath := filepath.Join(cfgDir, t.Path)
+                if !filepath.IsAbs(relPath) </span><span class="cov0" title="0">{
+                        cfg.Templates[i].Path, _ = filepath.Abs(relPath)
+                }</span>
+        }
+
+        <span class="cov0" title="0">return &amp;cfg, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package faker
+
+import (
+        "encoding/json"
+        "fmt"
+        "math/rand"
+        "regexp"
+        "strings"
+        "text/template"
+)
+
+// LoadedTemplate represents a template ready for generation.
+type LoadedTemplate struct {
+        Path    string
+        Weight  int
+        Content string
+        Fields  []Placeholder
+}
+
+// Generator is the main structure used to emit synthetic data.
+type Generator struct {
+        Templates    []LoadedTemplate
+        CustomTypes  map[string]CustomType
+        TotalRecords int
+}
+
+// NewGenerator builds and validates a generator instance from raw config data.
+func NewGenerator(total int, customTypes map[string]CustomType, templates []LoadedTemplate) (*Generator, error) <span class="cov8" title="4">{
+        if total &lt;= 0 </span><span class="cov1" title="1">{
+                return nil, fmt.Errorf("total_records must be &gt; 0")
+        }</span>
+        <span class="cov7" title="3">if len(templates) == 0 </span><span class="cov1" title="1">{
+                return nil, fmt.Errorf("no templates provided")
+        }</span>
+        <span class="cov4" title="2">return &amp;Generator{
+                Templates:    templates,
+                CustomTypes:  customTypes,
+                TotalRecords: total,
+        }, nil</span>
+}
+
+// GenerateAll returns a slice of generated records as raw JSON strings (one per record).
+func (g *Generator) GenerateAll() ([]string, error) <span class="cov1" title="1">{
+        var out []string
+
+        // Precompute cumulative weights
+        var cumulative []int
+        totalWeight := 0
+        for _, t := range g.Templates </span><span class="cov1" title="1">{
+                totalWeight += t.Weight
+                cumulative = append(cumulative, totalWeight)
+        }</span>
+
+        <span class="cov1" title="1">for i := 0; i &lt; g.TotalRecords; i++ </span><span class="cov10" title="5">{
+                tmpl := g.pickTemplate(cumulative, totalWeight)
+
+                // Resolve values
+                values := make(map[string]any)
+                for _, field := range tmpl.Fields </span><span class="cov10" title="5">{
+                        typeName, params := mergeParams(field.Type, g.CustomTypes, field)
+                        gen, err := GetGenerator(typeName, field.FieldName, params)
+                        if err != nil </span><span class="cov0" title="0">{
+                                return nil, fmt.Errorf("field '%s': %w", field.FieldName, err)
+                        }</span>
+                        <span class="cov10" title="5">val, err := gen.Generate()
+                        if err != nil </span><span class="cov0" title="0">{
+                                return nil, fmt.Errorf("generate '%s': %w", field.FieldName, err)
+                        }</span>
+                        <span class="cov10" title="5">values[field.FieldName] = val</span>
+                }
+
+                // correct template so it speaks `text/template` instead of our custom
+                // mark-up with the inline modifiers
+                <span class="cov10" title="5">runtime := tmpl.Content
+                re := regexp.MustCompile(`{{\s*"(.*?)"\s*}}`)
+                runtime = re.ReplaceAllStringFunc(runtime, func(match string) string </span><span class="cov10" title="5">{
+                        inner := re.FindStringSubmatch(match)
+                        if len(inner) != 2 </span><span class="cov0" title="0">{
+                                return match // leave untouched if malformed
+                        }</span>
+
+                        <span class="cov10" title="5">parts := strings.Split(inner[1], ":")
+                        if len(parts) &lt; 2 </span><span class="cov0" title="0">{
+                                return match
+                        }</span>
+
+                        <span class="cov10" title="5">fieldName := parts[0]
+                        return fmt.Sprintf("{{ .%s }}", fieldName)</span>
+                })
+
+                <span class="cov10" title="5">tpl, err := template.New("record").Parse(runtime)
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("parse template: %w", err)
+                }</span>
+
+                <span class="cov10" title="5">var sb strings.Builder
+                err = tpl.Execute(&amp;sb, values)
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("render template: %w", err)
+                }</span>
+
+                // Check it's a valid JSON object produced
+                <span class="cov10" title="5">var jsonObj map[string]interface{}
+                if err := json.Unmarshal([]byte(sb.String()), &amp;jsonObj); err != nil </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("invalid json produced: %w", err)
+                }</span>
+                <span class="cov10" title="5">jsonLine, _ := json.Marshal(jsonObj)
+
+                out = append(out, string(jsonLine))</span>
+        }
+
+        <span class="cov1" title="1">return out, nil</span>
+}
+
+func (g *Generator) pickTemplate(cumulative []int, total int) LoadedTemplate <span class="cov10" title="5">{
+        pick := rand.Intn(total)
+        for i, threshold := range cumulative </span><span class="cov10" title="5">{
+                if pick &lt; threshold </span><span class="cov10" title="5">{
+                        return g.Templates[i]
+                }</span>
+        }
+        <span class="cov0" title="0">return g.Templates[len(g.Templates)-1]</span> // fallback
+}
+
+func mergeParams(typeName string, custom map[string]CustomType, field Placeholder) (string, map[string]string) <span class="cov10" title="5">{
+        out := map[string]string{}
+        if def, ok := custom[field.Type]; ok </span><span class="cov0" title="0">{
+                typeName = def.Type
+                for k, v := range def.Params </span><span class="cov0" title="0">{
+                        out[k] = v
+                }</span>
+        }
+        <span class="cov10" title="5">for k, v := range field.Params </span><span class="cov0" title="0">{
+                out[k] = v // override
+        }</span>
+        <span class="cov10" title="5">return typeName, out</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package faker
 
 import (
         "fmt"
@@ -97,22 +330,15 @@ import (
         "text/template/parse"
 )
 
-// Placeholder represents a single interpolation tag in a template.
-type Placeholder struct {
-        FieldName string
-        Type      string
-        Params    map[string]string
-}
-
 // ParseTemplate reads a template file and extracts all inline-modifier placeholders using {{ }} with quoted strings.
-func ParseTemplate(path string) ([]Placeholder, error) <span class="cov5" title="6">{
+func ParseTemplate(path string) ([]Placeholder, error) <span class="cov6" title="8">{
         data, err := os.ReadFile(path)
-        if err != nil </span><span class="cov0" title="0">{
+        if err != nil </span><span class="cov1" title="1">{
                 return nil, fmt.Errorf("failed to read template %s: %w", path, err)
         }</span>
 
-        <span class="cov5" title="6">t, err := template.New("tmpl").Parse(string(data))
-        if err != nil </span><span class="cov0" title="0">{
+        <span class="cov5" title="7">t, err := template.New("tmpl").Parse(string(data))
+        if err != nil </span><span class="cov1" title="1">{
                 return nil, fmt.Errorf("failed to parse template %s: %w", path, err)
         }</span>
 
@@ -179,6 +405,171 @@ func parseParams(items []string) map[string]string <span class="cov6" title="10"
                 }</span>
         }
         <span class="cov6" title="10">return m</span>
+}
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package faker
+
+import (
+        "fmt"
+)
+
+// GeneratorFactory builds a FieldGenerator from a field name and params.
+type GeneratorFactory func(fieldName string, params map[string]string) (FieldGenerator, error)
+
+var generatorRegistry = make(map[string]GeneratorFactory)
+
+// RegisterGenerator installs a new type generator.
+func RegisterGenerator(typeName string, factory GeneratorFactory) <span class="cov7" title="4">{
+        if _, exists := generatorRegistry[typeName]; exists </span><span class="cov1" title="1">{
+                panic("duplicate generator type registered: " + typeName)</span>
+        }
+        <span class="cov6" title="3">generatorRegistry[typeName] = factory</span>
+}
+
+// GetGenerator returns a generator by type name.
+func GetGenerator(typeName, fieldName string, params map[string]string) (FieldGenerator, error) <span class="cov10" title="7">{
+        factory, ok := generatorRegistry[typeName]
+        if !ok </span><span class="cov1" title="1">{
+                return nil, fmt.Errorf("unknown generator type: %s", typeName)
+        }</span>
+        <span class="cov9" title="6">return factory(fieldName, params)</span>
+}
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package faker
+
+import (
+        "errors"
+        "fmt"
+        "math/rand"
+        "strings"
+)
+
+func init() <span class="cov1" title="1">{
+        RegisterGenerator("enum", newEnumGenerator)
+}</span>
+
+type enumGenerator struct {
+        values []string
+}
+
+func (g *enumGenerator) Generate() (any, error) <span class="cov10" title="10">{
+        if len(g.values) == 0 </span><span class="cov0" title="0">{
+                return nil, errors.New("enum has no values to choose from")
+        }</span>
+        <span class="cov10" title="10">return fmt.Sprintf("%q", g.values[rand.Intn(len(g.values))]), nil</span>
+}
+
+func newEnumGenerator(_ string, params map[string]string) (FieldGenerator, error) <span class="cov3" title="2">{
+        raw, ok := params["values"]
+        if !ok || strings.TrimSpace(raw) == "" </span><span class="cov1" title="1">{
+                return nil, errors.New("enum requires a 'values' parameter")
+        }</span>
+        <span class="cov1" title="1">values := strings.Split(raw, ",")
+        for i := range values </span><span class="cov5" title="3">{
+                values[i] = strings.TrimSpace(values[i])
+        }</span>
+        <span class="cov1" title="1">return &amp;enumGenerator{values: values}, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file6" style="display: none">package faker
+
+import (
+        "github.com/google/uuid"
+)
+
+func init() <span class="cov1" title="1">{
+        RegisterGenerator("uuid", newUUIDGenerator)
+}</span>
+
+type uuidGenerator struct{}
+
+func (g *uuidGenerator) Generate() (any, error) <span class="cov10" title="6">{
+        return QuoteString(uuid.NewString()), nil
+}</span>
+
+func newUUIDGenerator(_ string, _ map[string]string) (FieldGenerator, error) <span class="cov10" title="6">{
+        return &amp;uuidGenerator{}, nil
+}</span>
+</pre>
+		
+		<pre class="file" id="file7" style="display: none">package faker
+
+import "fmt"
+
+func QuoteString(val string) string <span class="cov10" title="6">{
+        return fmt.Sprintf(`"%s"`, val)
+}</span>
+</pre>
+		
+		<pre class="file" id="file8" style="display: none">package cli
+
+import (
+        "flag"
+        "fmt"
+        "github.com/tommed/ducto-faker/config"
+        "github.com/tommed/ducto-faker/faker"
+        "io"
+        "os"
+)
+
+//goland:noinspection GoUnhandledErrorResult
+func Run(args []string, stdout io.Writer, stderr io.Writer) int <span class="cov0" title="0">{
+        var configPath string
+        fs := flag.NewFlagSet("cli", flag.ExitOnError)
+        fs.StringVar(&amp;configPath, "config", "", "Path to config file")
+        if err := fs.Parse(args); err != nil </span><span class="cov0" title="0">{
+                fmt.Fprintln(stderr, err)
+                return 1
+        }</span>
+
+        <span class="cov0" title="0">cfg, err := config.Load(configPath)
+        if err != nil </span><span class="cov0" title="0">{
+                fmt.Fprintf(stderr, "failed to load config: %v\n", err)
+                return 1
+        }</span>
+
+        // Resolve template paths and load content
+        <span class="cov0" title="0">var loadedTemplates []faker.LoadedTemplate
+        for _, t := range cfg.Templates </span><span class="cov0" title="0">{
+                content, err := os.ReadFile(t.Path)
+                if err != nil </span><span class="cov0" title="0">{
+                        fmt.Fprintf(stderr, "failed to read template '%s': %v\n", t.Path, err)
+                        return 1
+                }</span>
+
+                <span class="cov0" title="0">placeholders, err := faker.ParseTemplate(t.Path)
+                if err != nil </span><span class="cov0" title="0">{
+                        fmt.Fprintf(stderr, "failed to parse template '%s': %v\n", t.Path, err)
+                        return 1
+                }</span>
+
+                <span class="cov0" title="0">loadedTemplates = append(loadedTemplates, faker.LoadedTemplate{
+                        Path:    t.Path,
+                        Weight:  t.Weight,
+                        Content: string(content),
+                        Fields:  placeholders,
+                })</span>
+        }
+
+        <span class="cov0" title="0">g, err := faker.NewGenerator(cfg.TotalRecords, cfg.CustomTypes, loadedTemplates)
+        if err != nil </span><span class="cov0" title="0">{
+                fmt.Fprintf(stderr, "failed to initialize generator: %v\n", err)
+                return 1
+        }</span>
+
+        <span class="cov0" title="0">records, err := g.GenerateAll()
+        if err != nil </span><span class="cov0" title="0">{
+                fmt.Fprintf(stderr, "failed to generate data: %v\n", err)
+                return 1
+        }</span>
+
+        <span class="cov0" title="0">for _, rec := range records </span><span class="cov0" title="0">{
+                fmt.Fprintln(stdout, rec)
+        }</span>
+        <span class="cov0" title="0">return 0</span>
 }
 </pre>
 		

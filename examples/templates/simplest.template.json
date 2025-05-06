@@ -1,0 +1,4 @@
+{
+    "id": {{"id:uuid"}},
+    "status": {{"status:enum:values=OPEN,CLOSED,UNKNOWN"}}
+}

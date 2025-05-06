@@ -8,13 +8,6 @@ import (
 	"text/template/parse"
 )
 
-// Placeholder represents a single interpolation tag in a template.
-type Placeholder struct {
-	FieldName string
-	Type      string
-	Params    map[string]string
-}
-
 // ParseTemplate reads a template file and extracts all inline-modifier placeholders using {{ }} with quoted strings.
 func ParseTemplate(path string) ([]Placeholder, error) {
 	data, err := os.ReadFile(path)
