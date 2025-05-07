@@ -38,7 +38,10 @@
 go install github.com/tommed/ducto-faker/cmd/ducto-faker@latest
 
 # Run from config
-ducto-faker -config ./configs/sample.yaml > output.jsonl
+ducto-faker -config sample.yaml > output.jsonl
+
+# Pipe into another process
+ducto-faker -config sample.yaml | ducto-orchestrator -config orchestrator.yml
 ```
 
 ---
