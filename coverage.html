@@ -564,9 +564,9 @@ func init() <span class="cov3" title="2">{
 
         <span class="cov3" title="2">RegisterGenerator("yes_no", func(_ string, _ map[string]string) (FieldGenerator, error) </span><span class="cov1" title="1">{
                 return simpleFaker(func() string </span><span class="cov1" title="1">{
-                        if gofakeit.Bool() </span><span class="cov0" title="0">{
+                        if gofakeit.Bool() </span><span class="cov1" title="1">{
                                 return "Yes"
-                        }</span> else<span class="cov1" title="1"> {
+                        }</span> else<span class="cov0" title="0"> {
                                 return "No"
                         }</span>
                 }), nil
