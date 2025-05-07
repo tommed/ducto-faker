@@ -90,7 +90,7 @@ templates:
 
   ```go
   {
-    "state": {{"status:enum"}}
+    "state": {{"status:status"}}
   }
   ```
 
