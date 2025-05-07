@@ -51,7 +51,7 @@ total_records: 1000
 custom_types:
   status:
     type: enum
-    values: ["OPEN", "CLOSED", "UNKNOWN"]
+    values: "OPEN,CLOSED,UNKNOWN"
   uk_latitude:
     type: float
     min: 49.9
