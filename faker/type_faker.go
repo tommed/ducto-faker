@@ -2,8 +2,9 @@ package faker
 
 import (
 	"fmt"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/brianvoe/gofakeit/v6"
@@ -75,7 +76,10 @@ func init() {
 	})
 
 	RegisterGenerator("bool", func(_ string, _ map[string]string) (FieldGenerator, error) {
-		return simpleFaker(func() string { return strings.Title(strconv.FormatBool(gofakeit.Bool())) }), nil
+		return simpleFaker(func() string {
+			c := cases.Title(language.BritishEnglish)
+			return c.String(strconv.FormatBool(gofakeit.Bool()))
+		}), nil
 	})
 
 	RegisterGenerator("yes_no", func(_ string, _ map[string]string) (FieldGenerator, error) {
