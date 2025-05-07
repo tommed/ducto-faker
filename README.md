@@ -82,6 +82,7 @@ templates:
 ## 📚 Documentation
 
 - See the [specification document](docs/spec-v1.md) for full syntax and implementation details.
+- All specifications are available [here](docs/specs.md).
 
 ---
 
