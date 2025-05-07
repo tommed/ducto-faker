@@ -9,33 +9,48 @@ import (
 )
 
 type intGenerator struct {
-	min, max int64
+	min, max, leftZeroPadding int64
+	prefix, suffix            string
 }
 
 func (g *intGenerator) Generate() (any, error) {
-	return rand.Int63n(g.max-g.min+1) + g.min, nil
+	var val any = rand.Int63n(g.max-g.min+1) + g.min
+	if g.prefix != "" || g.suffix != "" || g.leftZeroPadding > 0 {
+		paddingFormat := "%0" + strconv.Itoa(int(g.leftZeroPadding)) + "d"
+		return g.prefix + fmt.Sprintf(paddingFormat, val) + g.suffix, nil
+	}
+	return val, nil
 }
 
 func newIntGenerator(_ string, params map[string]string) (FieldGenerator, error) {
-	min := int64(0)
-	max := int64(100)
+	minVal := int64(0)
+	maxVal := int64(100)
+	leftZeroPadding := int64(0)
+	prefix := params["prefix"]
+	suffix := params["suffix"]
 	var err error
 	if val, ok := params["min"]; ok {
-		min, err = strconv.ParseInt(val, 10, 64)
+		minVal, err = strconv.ParseInt(val, 10, 64)
 		if err != nil {
 			return nil, fmt.Errorf("invalid min param: %w", err)
 		}
 	}
 	if val, ok := params["max"]; ok {
-		max, err = strconv.ParseInt(val, 10, 64)
+		maxVal, err = strconv.ParseInt(val, 10, 64)
 		if err != nil {
 			return nil, fmt.Errorf("invalid max param: %w", err)
 		}
 	}
-	if min > max {
+	if val, ok := params["left_zero_padding"]; ok {
+		leftZeroPadding, err = strconv.ParseInt(val, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid left_zero_padding param: %w", err)
+		}
+	}
+	if minVal > maxVal {
 		return nil, errors.New("min cannot be greater than max")
 	}
-	return &intGenerator{min, max}, nil
+	return &intGenerator{minVal, maxVal, leftZeroPadding, prefix, suffix}, nil
 }
 
 type floatGenerator struct {

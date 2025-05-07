@@ -34,6 +34,16 @@ func TestIntGenerator_WithRange(t *testing.T) {
 	}
 }
 
+func TestIntGenerator_PrefixSuffix(t *testing.T) {
+	generator, _ := newIntGenerator("field", map[string]string{"min": "1", "max": "1", "suffix": "p", "prefix": "£"})
+	val, err := generator.Generate()
+	assert.NoError(t, err)
+
+	strVal, ok := val.(string)
+	assert.True(t, ok)
+	assert.Equal(t, "£1p", strVal)
+}
+
 func TestIntGenerator_InvalidParams(t *testing.T) {
 	_, err := newIntGenerator("field", map[string]string{"min": "a"})
 	assert.Error(t, err)
@@ -43,6 +53,25 @@ func TestIntGenerator_InvalidParams(t *testing.T) {
 
 	_, err = newIntGenerator("field", map[string]string{"min": "10", "max": "a"})
 	assert.Error(t, err)
+
+	_, err = newIntGenerator("field", map[string]string{"min": "10", "max": "20", "left_zero_padding": "p"})
+	assert.Error(t, err)
+}
+
+func TestFloatGenerator_StoreName(t *testing.T) {
+	gen := intGenerator{
+		min:             100,
+		max:             9999,
+		leftZeroPadding: 5,
+		prefix:          "ca",
+		suffix:          "bos01",
+	}
+	val, err := gen.Generate()
+
+	assert.NoError(t, err)
+	strVal, ok := val.(string)
+	assert.True(t, ok)
+	assert.Equal(t, 12, len(strVal), strVal+" was not 12 characters")
 }
 
 func TestFloatGenerator_DefaultRange(t *testing.T) {
