@@ -1,4 +1,4 @@
 {
   "id": {{"id:uuid"}},
-  "status": {{"status:status"}}
+  "state": {{"state:status"}}
 }
