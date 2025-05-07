@@ -12,7 +12,7 @@ import (
 //goland:noinspection GoUnhandledErrorResult
 func Run(args []string, stdout io.Writer, stderr io.Writer) int {
 	var configPath string
-	fs := flag.NewFlagSet("cli", flag.ExitOnError)
+	fs := flag.NewFlagSet("cli", flag.ContinueOnError)
 	fs.StringVar(&configPath, "config", "", "Path to config file")
 	if err := fs.Parse(args); err != nil {
 		fmt.Fprintln(stderr, err)

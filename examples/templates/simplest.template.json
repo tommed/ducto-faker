@@ -1,4 +1,6 @@
 {
     "id": {{"id:uuid"}},
-    "status": {{"status:enum:values=OPEN,CLOSED,UNKNOWN"}}
+    "status": {{"status:enum:values=OPEN,CLOSED,UNKNOWN"}},
+    "whole_number": {{"whole_number:int"}},
+    "floating_number": {{"floating_number:float:min=0.0:max=1.0:dps=3"}}
 }

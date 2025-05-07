@@ -25,4 +25,8 @@ func TestEnumGenerator_MissingValues(t *testing.T) {
 	_, err := newEnumGenerator("status", map[string]string{})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "requires a 'values'")
+
+	gen2 := enumGenerator{}
+	_, err = gen2.Generate()
+	assert.Contains(t, err.Error(), "enum has no values to choose from")
 }

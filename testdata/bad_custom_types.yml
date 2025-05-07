@@ -1,0 +1,16 @@
+total_records: 10
+
+custom_types:
+  status:
+    type: enum
+    # NOTE: a common mistake when writing enums
+    # here is to assume it's an array list (sensible),
+    # but it actually needs to be a string (for now)
+    values:
+    - OPEN
+    - CLOSED
+    - UNKNOWN
+
+templates:
+  - path: "../examples/templates/custom_type_status.template.json"
+    weight: 1
